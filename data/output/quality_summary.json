@@ -1,0 +1,39 @@
+{
+  "totals_row": 3353851,
+  "kept_row": 3313866,
+  "rejected_row": 39985,
+  "rejected_pct": 1.19,
+  "rejected_by_reason": {
+    "non_positive_distance": 21850,
+    "duration_over_limit": 9410,
+    "pickup_outside_period": 436,
+    "non_positive_fare": 2884,
+    "implausible_speed": 2570,
+    "non_positive_duration": 2820,
+    "distance_over_limit": 9,
+    "negative_charges": 3,
+    "fare_over_limit": 2,
+    "missing_required_field": 1
+  },
+  "values_set_to_missing": {
+    "passenger_count": 49620,
+    "rate_code_id": 127,
+    "payment_type": 0
+  },
+  "zone_in_lookup": 265,
+  "zone_with_geometry": 260,
+  "features_created": [
+    "trip_duration_min",
+    "avg_speed_mph",
+    "fare_per_mile",
+    "tip_pct",
+    "pickup_hour",
+    "pickup_weekday"
+  ],
+  "cleaning_limits": {
+    "max_duration_min": 240,
+    "max_distance_miles": 100,
+    "max_fare_usd": 500,
+    "max_speed_mph": 80
+  }
+}
