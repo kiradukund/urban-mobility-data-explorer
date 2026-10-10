@@ -1,0 +1,12 @@
+.venv/
+__pycache__/
+.pytest_cache/
+*:Zone.Identifier
+
+# raw trip data - download from Canvas into data/
+data/yellow_tripdata_*.csv
+data/yellow_tripdata_*.parquet
+
+# large generated output - run the pipeline to recreate
+data/output/clean_trips.parquet
+data/output/rejected_trips.csv
