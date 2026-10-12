@@ -6,7 +6,7 @@ PRAGMA foreign_keys = ON;
 DROP TABLE IF EXISTS trips;
 DROP TABLE IF EXISTS zones;
 DROP TABLE IF EXISTS vendors;
-DROP TABLE IF EXISTS payment_type;
+DROP TABLE IF EXISTS payment_types;
 DROP TABLE IF EXISTS rate_codes;
 
 -- lockup (dimension) tables
