@@ -83,6 +83,11 @@ def prepare_batch(df):
 def load_trips(conn):
     """Read clean_trips.parquet in batches (step 1: just count the rows)."""
     pf = pq.ParquetFile(OUTPUT_DIR / "clean_trips.parquet")
+    columns = ", ".join(TRIP_COLUMNS)
+    placeholders = ", ".join(["?"] * len(TRIP_COLUMNS))
+    sql = f"INSERT INTO trips ({columns}) VALUES ({placeholders})"
+
+
     total = 0
     batch_number = 0
 
@@ -90,10 +95,10 @@ def load_trips(conn):
         df = batch.to_pandas()
         batch_number = batch_number + 1
         rows = prepare_batch(df)
-        if batch_number == 1:
-            print("first row:", rows[0])
-        total = total + len(df)
-        print(f"batch {batch_number}: {len(df)} rows")
+        conn.executemany(sql, rows)
+        conn.commit()
+        total = total + len(rows)
+        print(f"batch {batch_number}: {len(rows)} rows inserted")
 
     return total
 
@@ -103,6 +108,6 @@ if __name__ == "__main__":
     count = load_zones(conn)
     print("Zones loaded:", count)
     total = load_trips(conn)
-    print("Trips read:", total)
+    print("Trips inserted:", total)
     conn.close()
 

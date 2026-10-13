@@ -35,7 +35,8 @@ CREATE TABLE rate_codes(
 
 INSERT INTO vendors VALUES
     (1, 'Creative Mobile Technologies'),
-    (2, 'VeriFone');
+    (2, 'VeriFone'),
+    (4, 'Unknown (not in TLC data dictionary)');
 
 INSERT INTO payment_types VALUES
     (1, 'Credit card'), (2, 'Cash'), (3, 'No charge'),
@@ -70,8 +71,8 @@ CREATE TABLE trips(
     total_amount          REAL     NOT NULL,
     congestion_surcharge  REAL,
     -- derived features (computed by the data pipeline)
-    trip_duration_main    REAL     NOT NULL,
-    avg_speed_main        REAL,
+    trip_duration_min     REAL     NOT NULL,
+    avg_speed_mph         REAL,
     fare_per_mile         REAL,
     tip_pct               REAL,
     pickup_hour           INTEGER  NOT  NULL CHECK (pickup_hour BETWEEN 0 AND 23),
