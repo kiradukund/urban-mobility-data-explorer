@@ -1,4 +1,5 @@
 import sqlite3
+import pandas as pd
 from pathlib import Path
 
 # backend/database/
@@ -19,12 +20,20 @@ def create_database():
     return conn
 
 
+def load_zones(conn):
+    """Insert the 265 taxi zones from zones.csv into the zones tables."""
+    df = pd.read_csv(OUTPUT_DIR / "zones.csv", keep_default_na=False)
+    rows = list(df.itertuples(index=False, name=None))
+    conn.executemany(
+        "INSERT INTO zones (location_id, borough, zone, service_zone) VALUES (?, ?, ?, ?)",
+        rows,
+    )
+    conn.commit()
+    return len(rows)
+
 if __name__ == "__main__":
     conn = create_database()
-    tables = conn.execute(
-        "SELECT name FROM sqlite_master WHERE type='table'"
-    ).fetchall()
-    print("Tables:", tables)
+    count = load_zones(conn)
+    print("Zones loaded:", count)
     conn.close()
-
 
