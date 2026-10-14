@@ -151,5 +151,25 @@ def trips_by_hour():
         hourly[row["hour"]] = row["trips"]
     return jsonify({"hourly": hourly})
 
+
+@app.route("/api/fare-by-hour")
+def fare_by_hour():
+    """Average fare for each pickup hour, 0 to 23 (hour filters are ignored)."""
+    where, values = build_filters(skip=("hour",))
+    conn = get_db()
+    rows = conn.execute(
+        "SELECT t.pickup_hour AS hour, AVG(t.fare_amount) AS avg_fare "
+        "FROM trips t JOIN zones z ON t.pu_location_id = z.location_id "
+        + where +
+        "GROUP BY hour",
+        values,
+    ).fetchall()
+    conn.close()
+
+    fares = [None] * 24
+    for row in rows:
+        fares[row["hour"]] = round(row["avg_fare"], 2)
+    return jsonify({"fareByHour": fares})
+
 if __name__ == "__main__":
     app.run(debug=True, port=3000)
