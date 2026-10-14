@@ -106,5 +106,32 @@ def meta():
     })
 
 
+@app.route("/api/summary")
+def summary():
+    """Headline numbers for all trips that match the current filters."""
+    where, values = build_filters()
+    conn = get_db()
+    row = conn.execute(
+        "SELECT COUNT(*) AS total, "
+        "AVG(t.fare_amount) AS avg_fare, "
+        "AVG(t.trip_distance) AS avg_distance, "
+        "SUM(t.fare_amount) / SUM(t.trip_distance) AS fare_mile "
+        "FROM trips t JOIN zones z ON t.pu_location_id = z.location_id "
+        +where,
+        values,
+    ).fetchone()
+    conn.close()
+
+    def rounded(number):
+        return round(number, 2) if number is not None else None
+
+    return jsonify({
+        "totalTrips": row["total"],
+        "avgFare": rounded(row["avg_fare"]),
+        "avgDistance": rounded(row["avg_distance"]),
+        "fareMile": rounded(row["fare_mile"]),
+    })
+
+
 if __name__ == "__main__":
     app.run(debug=True, port=3000)
