@@ -35,5 +35,21 @@ def zones():
     return jsonify([dict(row) for row in rows])
 
 
+@app.route("/api/meta")
+def meta():
+    """Return the date range actually covered by the trips in the database."""
+    conn = get_db()
+    row = conn.execute(
+        "SELECT date(MIN(pickup_datetime)) AS period_start,"
+        "date(MAX(pickup_datetime)) AS period_end FROM trips"
+    ).fetchone()
+    conn.close()
+    return jsonify({
+        "isMock": False,
+        "periodStart": row["period_start"],
+        "periodEnd": row["period_end"],
+    })
+
+
 if __name__ == "__main__":
     app.run(debug=True, port=3000)
