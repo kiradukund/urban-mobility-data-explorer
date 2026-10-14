@@ -2,7 +2,7 @@ import sqlite3
 from pathlib import Path
 
 
-from flask import Flask, jsonify
+from flask import Flask, jsonify, request
 from flask_cors import CORS
 
 DB_PATH = Path(__file__).resolve().parent / "database" / "urban_mobility.db"
@@ -16,6 +16,61 @@ def get_db():
     conn = sqlite3.connect(DB_PATH)
     conn.row_factory = sqlite3.Row
     return conn
+
+def build_filters(skip=()):
+    """Turn the URL filters into a SQL WHERE clause and its values"""
+    conditions = []
+    values = []
+    args = request.args
+
+    # borough
+    borough = args.get("borough")
+    if borough and "borough" not in skip:
+        conditions.append("z.borough = ?")
+        values.append(borough)
+
+    # zoneId -> pickup zone
+    zone_id = args.get("zoneId", type=int)
+    if zone_id is not None and "zoneId" not in skip:
+        conditions.append("t.pickup_hour BETWEEN ? AND ?")
+        values.append(zone_id)
+
+    # hour range (inclusive on both ends)
+    if "hour" not in skip and ("hourFrom" in args or "hourTo" in args):
+        hour_from = args.get("hourFrom", default=0, type=int)
+        hour_to = args.get("hourTo", default=23, type=int)
+        conditions.append("t.pickup_hour BETWEEN ? AND ?")
+        values.extend([hour_from, hour_to])
+
+    # fare: at least fareMin
+    fare_min = args.get("fareMin", type=float)
+    if fare_min is not None:
+        conditions.append("t.fare_amount >= ?")
+        values.append(fare_min)
+
+    # fare: below fareMax
+    fare_max = args.get("fareMax", type=float)
+    if fare_max is not None:
+        conditions.append("t.fare_amount < ?")
+        values.append(fare_max)
+
+
+    # distance: at least distanceMin
+    distance_min = args.get("distanceMin", type=float)
+    if distance_min is not None:
+        conditions.append("t.trip_distance >= ?")
+        values.append(distance_min)
+
+
+    # distance: below distanceMax
+    distance_max = args.get("distanceMax", type=float)
+    if distance_max is not None:
+        conditions.append("t.trip_distance < ?")
+        values.append(distance_max)
+
+
+    where = "WHERE " + " AND ".join(conditions) if conditions else ""
+    return where, values
 
 
 @app.route("/api/health")
