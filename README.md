@@ -1,375 +1,462 @@
 # Urban Mobility Data Explorer
 
-## Data Processing Pipeline
+An end-to-end system for exploring **New York City Yellow Taxi trips (January 2019)**: a Python cleaning pipeline, a SQLite database, a Flask REST API, and an interactive dashboard built with plain HTML, CSS and JavaScript, including a hand-written Top-K ranking algorithm.
 
-The pipeline cleans the raw NYC Yellow Taxi trip data, removes invalid records,
-adds derived features, and exports the zone map boundaries for the dashboard.
-
-### 1. Requirements
-
-- Python 3.10 or newer
-- About 2 GB of free RAM and 500 MB of disk space
-
-### 2. Get the code
-
-```bash
-git clone https://github.com/kiradukund/urban-mobility-data-explorer.git
-cd urban-mobility-data-explorer
-git switch feature/data-processing
-```
-
-### 3. Add the trip data (not on GitHub, too large)
-
-The trip file is too large for GitHub (285 MB), so it is not in the repository.
-Download it from Canvas and place it **directly inside the `data/` folder**:
-
-```
-urban-mobility-data-explorer/
-└── data/
-    ├── yellow_tripdata_2019-01.csv     <-- put the downloaded file here
-    ├── taxi_zone_lookup.csv            (already in the repo)
-    ├── taxi_zones/                     (already in the repo)
-    ├── data_processing/
-    └── test/
-```
-
-The file name must be exactly `yellow_tripdata_2019-01.csv`
-(or `yellow_tripdata_2019-01.parquet`; if both exist the parquet file is used).
-
-### 4. Set up a virtual environment and install packages
-
-From the project root (`urban-mobility-data-explorer/`):
-
-**Linux / macOS / WSL**
-```bash
-python3 -m venv .venv
-source .venv/bin/activate
-pip install -r data/requirements.txt
-```
-
-**Windows (PowerShell)**
-```powershell
-python -m venv .venv
-.venv\Scripts\Activate.ps1
-pip install -r data\requirements.txt
-```
-
-### 5. Run the pipeline
-
-The pipeline must be run **from inside the `data/` folder** as a module:
-
-```bash
-cd data
-python -m data_processing.pipeline
-```
-
-It processes the trips in batches of 200,000 rows and prints progress:
-
-```
-batch 1: 200,000 read, 197,800 kept, 2,200 rejected
-...
-```
-
-It takes about 3 minutes and finishes by printing a JSON quality summary.
-
-### 6. Output files
-
-All results are written to `data/output/`:
-
-| File | Description |
+| | |
 |---|---|
-| `clean_trips.parquet` | Cleaned trips with derived features (main table for the database) |
-| `rejected_trips.csv` | Every excluded record with its `reject_reason` |
-| `zones.csv` | Cleaned taxi zone lookup (location_id, borough, zone, service_zone) |
-| `taxi_zones.geojson` | Zone boundaries in latitude/longitude (EPSG:4326) for the map |
-| `quality_summary.json` | Row counts, rejections by reason, and repaired values |
-
-`zones.csv`, `taxi_zones.geojson` and `quality_summary.json` are committed to the repo.
-`clean_trips.parquet` and `rejected_trips.csv` are not (too large), so run the pipeline to generate them.
-
-### 7. Run the tests
-
-From inside `data/`:
-
-```bash
-python -m pytest
-```
-
-All 11 tests should pass.
-
-### Troubleshooting
-
-| Problem | Fix |
-|---|---|
-| `FileNotFoundError: i cound not find the yellow taxi trip dataset` | The trip file is not in `data/` or is named differently |
-| `ModuleNotFoundError: No module named 'data_processing'` | You are not inside the `data/` folder, or you used `python pipeline.py` instead of `python -m data_processing.pipeline` |
-| `ModuleNotFoundError: No module named 'geopandas'` (or pandas/pyarrow) | Activate the virtual environment and run `pip install -r requirements.txt` |
+| 🎥 **Video walkthrough** | _[add video link]_ |
+| 🗄️ **Prepared database** (`urban_mobility.zip`, ~495 MB) | _[add database link]_ |
+| 📄 **Technical report** | _[add report link]_ |
+| ✅ **Team task sheet** | [Google Sheet](https://docs.google.com/spreadsheets/d/1d-wc7vEV7Mh1RwuPFk3NMYn0ZM0E3tuL2cny6_v9Bo8/edit?usp=sharing) |
 
 ---
 
-## Working on This Project (Guide for Team Members)
+## Team
 
-### Branches
-
-| Branch | Owner area |
-|---|---|
-| `feature/data-processing` | Data cleaning pipeline (`data/`) |
-| `feature/backend-api` | Database + API |
-| `feature/frontend-ui` | Dashboard |
-| `main` | Final merged version, update only through Pull Requests |
-
-Work on your own branch, commit small and often, and open a Pull Request into `main` when a feature is ready.
-
-To get the latest data-processing work into your branch:
-
-```bash
-git fetch origin
-git merge origin/feature/data-processing
-```
-
-Never commit the raw trip CSV, `.venv/`, `clean_trips.parquet` or `rejected_trips.csv`
-(they are blocked by `.gitignore` because they are too large).
-
----
-
-### Data Contract: what the pipeline gives you
-
-Run the pipeline first (see above). Everything you need is in `data/output/`.
-
-#### `clean_trips.parquet`: main trips table (≈3.3 million rows)
-
-| Column | Type | Description |
+| Member | Role | Owns |
 |---|---|---|
-| `vendor_id` | int | 1 = Creative Mobile Technologies, 2 = VeriFone |
-| `pickup_datetime` | timestamp | Pickup time (NYC local time) |
-| `dropoff_datetime` | timestamp | Dropoff time (NYC local time) |
-| `passenger_count` | int, nullable | 1–6; invalid values (e.g. 0) set to null |
-| `trip_distance` | float | Miles |
-| `rate_code_id` | int, nullable | 1 Standard, 2 JFK, 3 Newark, 4 Nassau/Westchester, 5 Negotiated, 6 Group ride |
-| `store_and_fwd_flag` | text | `Y` / `N` |
-| `pu_location_id` | int | Pickup zone → `zones.location_id` |
-| `do_location_id` | int | Dropoff zone → `zones.location_id` |
-| `payment_type` | int, nullable | 1 Credit card, 2 Cash, 3 No charge, 4 Dispute, 5 Unknown, 6 Voided |
-| `fare_amount` | float | USD |
-| `extra` | float | USD |
-| `mta_tax` | float | USD |
-| `tip_amount` | float | USD (only recorded for card payments) |
-| `tolls_amount` | float | USD |
-| `improvement_surcharge` | float | USD |
-| `total_amount` | float | USD |
-| `congestion_surcharge` | float | USD (missing values filled with 0) |
-| `trip_duration_min` | float | **Derived:** dropoff − pickup, in minutes |
-| `avg_speed_mph` | float | **Derived:** distance ÷ duration in hours |
-| `fare_per_mile` | float | **Derived:** fare ÷ distance |
-| `tip_pct` | float, nullable | **Derived:** tip ÷ fare × 100, card payments only (null for cash) |
-| `pickup_hour` | int | **Derived:** 0–23 |
-| `pickup_weekday` | int | **Derived:** 0 = Monday … 6 = Sunday |
-
-There is no trip ID column, so let the database generate one (e.g. `INTEGER PRIMARY KEY` / `SERIAL`).
-
-Read it in Python with:
-
-```python
-import pandas as pd
-trips = pd.read_parquet("data/output/clean_trips.parquet")
-```
-
-#### `zones.csv`: zone lookup (265 rows)
-
-| Column | Type | Example |
-|---|---|---|
-| `location_id` | int (unique) | `1` |
-| `borough` | text | `EWR` |
-| `zone` | text | `Newark Airport` |
-| `service_zone` | text | `EWR` |
-
-Zones 264 (`Unknown`) and 265 (`Outside of NYC`) are real TLC codes and appear in trips, so keep them.
-
-#### `taxi_zones.geojson`: map boundaries (260 zones)
-
-- Coordinates are already **latitude/longitude (EPSG:4326)**, ready for Leaflet / Mapbox / D3.
-- Each feature has `properties`: `location_id`, `borough`, `zone`, `service_zone`.
-- Join map shapes to trip statistics using `location_id` = `pu_location_id` or `do_location_id`.
-- Zones 264 and 265 have no shape (they are not real places), so handle them in the UI as "Unknown / Outside NYC".
-
-#### `rejected_trips.csv`: excluded records log
-
-The original raw row plus a `reject_reason` column. Possible reasons, in the order they are checked:
-
-`missing_required_field`, `pickup_outside_period`, `non_positive_duration`, `duration_over_limit`,
-`non_positive_distance`, `distance_over_limit`, `non_positive_fare`, `fare_over_limit`,
-`negative_charges`, `unknown_location_id`, `implausible_speed`, `duplicate_record`
-
-#### `quality_summary.json`: cleaning statistics
-
-Total / kept / rejected rows, rejection counts by reason, repaired values and the limits used.
-Useful for a "Data Quality" panel on the dashboard and for the technical report.
+| **Emmanuel Amarikwa** | Data cleaning | `data/`: cleaning pipeline, validation rules, derived features, tests, zone exports |
+| **UWERA Sylvie** | Backend | `backend/`: database schema, data loader, Flask REST API |
+| **IRADUKUNDA CYUSA Kevin** | Frontend + algorithms | `index.html`, `styles.css`, `app.js`, `charts.js`, `algorithms.js`, `mock/`, `docs/` |
 
 ---
 
-### Notes for the Backend
+## Contents
 
-- `pu_location_id` and `do_location_id` should be **foreign keys** to `zones.location_id`
-  (every trip is already validated against the lookup, so there will be no FK errors).
-- Columns that will be filtered or grouped often are good index candidates:
-  `pickup_datetime`, `pu_location_id`, `do_location_id`, `pickup_hour`.
-- `passenger_count`, `rate_code_id`, `payment_type` and `tip_pct` can be null, so allow NULL in the schema.
-- If you need different cleaning limits (max duration, distance, fare, speed), change them in
-  `data/data_processing/config.py` and re-run the pipeline. Do not filter again in the API.
+1. [Overview](#1-overview)
+2. [Architecture](#2-architecture)
+3. [Repository structure](#3-repository-structure)
+4. [Quick start (prepared database)](#4-quick-start-prepared-database)
+5. [Build everything from the raw data](#5-build-everything-from-the-raw-data)
+6. [Data processing pipeline](#6-data-processing-pipeline)
+7. [Database](#7-database)
+8. [REST API](#8-rest-api)
+9. [Frontend dashboard](#9-frontend-dashboard)
+10. [Custom algorithm: Top-K with a min-heap](#10-custom-algorithm-top-k-with-a-min-heap)
+11. [Testing](#11-testing)
+12. [Performance and known limitations](#12-performance-and-known-limitations)
+13. [Troubleshooting](#13-troubleshooting)
+14. [Development workflow](#14-development-workflow)
+15. [AI usage and CodeVibe reports](#15-ai-usage-and-codevibe-reports)
 
-### Notes for the Frontend
+---
 
-- Use `taxi_zones.geojson` directly for the map (no conversion needed).
-- Use `borough` / `zone` names from the API, not hard-coded names.
-- `tip_pct` is null for cash trips on purpose (cash tips are not recorded), so exclude nulls from tip charts
-  instead of treating them as 0%.
-- The data currently covers **January 2019** (check `quality_summary.json` for the exact row counts).
+## 1. Overview
 
-### Changing the pipeline
+The dashboard answers one question: **how does New York move by taxi, and which trips don't fit the pattern?**
 
-| To change… | Edit |
+| Section | What it shows |
 |---|---|
-| Cleaning limits / valid codes / file paths | `data/data_processing/config.py` |
-| Rejection rules | `data/data_processing/clean.py` |
-| Derived features | `data/data_processing/features.py` |
-| Map export | `data/data_processing/spatial.py` |
-
-Always run `python -m pytest` inside `data/` after a change, and tell the team if an output column changes,
-because the database and the dashboard depend on these column names.
-
-## Frontend Dashboard
-
-An interactive, dependency-free dashboard (HTML, CSS, JavaScript) for exploring NYC Yellow Taxi trips. It runs in two modes: on a small **mock dataset** with no backend, or on the **live backend API**.
-
-### 1. What the dashboard shows
-
-| Section | What you see |
-|---|---|
-| **City Pulse** | Total trips, average fare, average distance, fare per mile, and the busiest hour of the day |
-| **24-hour rhythm** | Trips per pickup hour; click a bar to filter the whole dashboard to that hour |
-| **Patterns** | Average fare by hour, and the top pickup zones (click a zone to filter) |
+| **City Pulse** | Trip count, average fare, average distance, fare per mile, and the busiest hours |
+| **24-hour rhythm** | Trips per pickup hour; click a bar to filter everything to that hour |
+| **Patterns** | Average fare by hour and the busiest pickup zones (click a zone to filter) |
 | **Relationships** | Fare × distance scatter plot with a least-squares trend line, optionally coloured by borough |
 | **Outliers** | Top 10 trips that are most unusual for their distance, or simply the most expensive |
-| **Evidence** | Sortable, paginated trip table; click a row (or press Enter) for full trip details |
+| **Evidence** | Sortable, paginated trip table; click a row for full trip details |
 
-Filters (borough, pickup zone, hour range, fare range, distance range) apply to every section at once. Active filters appear as removable chips, and **Reset** clears them all. The layout adapts to desktop, tablet and phone widths.
+Filters (borough, pickup zone, hour range, fare range, distance range) apply to every section at once.
 
-### 2. Files
+**Dataset in numbers** (from the API on the full database):
 
-The frontend lives on the `feature/frontend-ui` branch:
+| Trips | Zones | Period | Average fare | Average distance | Fare per mile |
+|---|---|---|---|---|---|
+| 7,579,062 | 265 | 1–31 Jan 2019 | $12.16 | 2.82 mi | $4.32 |
+
+---
+
+## 2. Architecture
+
+```
+ OFFLINE · run once
+ ┌──────────────────────┐   ┌──────────────────────┐   ┌──────────────────────┐   ┌──────────────────────┐
+ │ Raw TLC data         │──▶│ Data pipeline        │──▶│ data/output/         │──▶│ load_data.py         │
+ │ trips CSV/Parquet    │   │ pandas, 200k batches │   │ clean_trips.parquet  │   │ schema.sql + inserts │
+ │ zone lookup, shapes  │   │ clean → features →   │   │ zones.csv, geojson   │   │                      │
+ └──────────────────────┘   │ validate → dedupe    │   │ rejected_trips.csv   │   └──────────┬───────────┘
+                            └──────────────────────┘   └──────────────────────┘              ▼
+ ONLINE · per request                                                              ┌──────────────────────┐
+ ┌──────────────────────┐  HTTP GET  ┌──────────────────────┐        SQL           │ SQLite               │
+ │ Browser dashboard    │──────────▶│ Flask REST API       │────────────────────▶│ urban_mobility.db    │
+ │ localhost:5500       │◀──────────│ localhost:3000/api   │◀────────────────────│ star schema, 1.6 GB  │
+ │ HTML · CSS · JS      │    JSON    │ 10 GET endpoints     │        rows          └──────────────────────┘
+ └──────────────────────┘            └──────────────────────┘
+```
+
+| Layer | Technology | Responsibility |
+|---|---|---|
+| Data pipeline | Python 3.10+, pandas, pyarrow, geopandas, pytest | Clean, validate and enrich raw trips; log every rejection; export zone geometry |
+| Database | SQLite 3 | Star schema, foreign keys, CHECK constraints, indexes |
+| API | Flask 3, flask-cors | Filtered aggregates, paging, sorting, sampling, regression sums, input validation |
+| Frontend | HTML, CSS, vanilla JavaScript (no libraries, no build step) | Filters, hand-drawn SVG charts, table, trip drawer, Top-K ranking |
+
+---
+
+## 3. Repository structure
 
 ```
 urban-mobility-data-explorer/
-├── index.html            # page structure and sections
-├── styles.css            # design tokens, layout, responsive rules
-├── app.js                # state, filters, calculations, rendering, data source switch
-├── charts.js             # rhythm bars, fare-by-hour line chart, zone list, scatter plot
-├── algorithms.js         # hand-written min-heap and Top-K
-├── mock/
-│   └── mock_data.json    # small development dataset
-└── docs/                 # design notes
+├── index.html                 Page structure and sections
+├── styles.css                 Design tokens, layout, responsive rules
+├── app.js                     State, filters, data layer (mock or API), rendering
+├── charts.js                  Hour bars, fare-by-hour line, zone list, scatter plot (SVG)
+├── algorithms.js              Hand-written min-heap and Top-K
+├── mock/mock_data.json        20-trip development dataset (same shape as the API)
+├── docs/
+│   ├── api_contract.md        Agreed API request/response shapes
+│   └── pseudocode.md          Top-K pseudocode and complexity
+├── backend/
+│   ├── app.py                 Flask API (port 3000)
+│   ├── requirements.txt
+│   ├── README.md              Backend details: schema, endpoints, design notes
+│   └── database/
+│       ├── schema.sql         Star schema + indexes
+│       └── load_data.py       Builds urban_mobility.db from the pipeline output
+├── data/
+│   ├── data_processing/       config, load, clean, features, spatial, pipeline
+│   ├── test/test_pipeline.py  11 pytest tests
+│   ├── output/                zones.csv, taxi_zones.geojson, quality_summary.json
+│   ├── taxi_zone_lookup.csv
+│   ├── taxi_zones/            TLC zone shapefile
+│   └── requirements.txt
+└── codevibe-reports/          Sealed CodeVibe report from each member
 ```
 
-Scripts load in this order at the end of `index.html`: `algorithms.js` → `charts.js` → `app.js`.
+Not committed (too large, or regenerated): the raw trip CSV, `clean_trips.parquet`, `rejected_trips.csv`, `urban_mobility.db`, virtual environments. See `.gitignore`.
 
-### 3. Requirements
+---
 
-- A modern browser (Chrome, Edge or Firefox)
-- **One** of these to serve the files:
-  - **VS Code** with the **Live Server** extension, or
-  - **Python 3** (for its built-in web server)
+## 4. Quick start (prepared database)
 
-No npm, no build step, no libraries.
+The fastest way to run the full system. **Requirements:** Python 3.10+, a modern browser, about 2 GB of free disk space.
 
-### 4. Get the code
+**1. Get the code**
 
 ```bash
 git clone https://github.com/kiradukund/urban-mobility-data-explorer.git
 cd urban-mobility-data-explorer
-git switch feature/frontend-ui
 ```
 
-### 5. Choose the data source
+**2. Install the backend packages**
 
-At the top of `app.js`:
-
-```js
-const config = {
-  mockDataPath: "mock/mock_data.json",
-  loadDelayMs: 0,
-  useMockData: true,                       // true = mock data, false = live API
-  apiBaseUrl: "http://localhost:3000/api"  // where the backend runs
-};
+```powershell
+# Windows (PowerShell)
+python -m venv .venv
+.venv\Scripts\Activate.ps1
+pip install -r backend\requirements.txt
 ```
 
-| Mode | Setting | Needs the backend? |
-|---|---|---|
-| **Mock** | `useMockData: true` | No. Reads `mock/mock_data.json` and shows a "Development placeholder data" badge |
-| **Live API** | `useMockData: false` | Yes. Start the backend first (see the Backend section) |
+```bash
+# macOS / Linux
+python3 -m venv .venv
+source .venv/bin/activate
+pip install -r backend/requirements.txt
+```
 
-Charts, table and drawer work the same in both modes. Only the data source changes.
+**3. Add the database.** Download `urban_mobility.zip` from the link at the top of this page and extract it so that the file sits at:
 
-### 6. Run the dashboard
+```
+backend/database/urban_mobility.db      (about 1.6 GB)
+```
 
-**Option A: VS Code Live Server**
-1. Open the project folder in VS Code.
-2. Open `index.html`.
-3. Click **Go Live** (bottom-right of the status bar).
-4. The browser opens **http://127.0.0.1:5500/index.html**.
+The name and location must match exactly. A wrong path makes SQLite create an empty file, and every endpoint then fails with `no such table: trips`.
 
-**Option B: Python**
+**4. Start the API** (terminal 1, from the repository root):
 
-From the project root:
+```bash
+python backend/app.py
+```
+
+Check it: <http://127.0.0.1:3000/api/health> returns `{"status": "ok"}`.
+
+**5. Serve the dashboard** (terminal 2, from the repository root):
 
 ```bash
 python -m http.server 5500
 ```
 
-Then open **http://localhost:5500**. Press `Ctrl+C` in the terminal to stop it.
+**6. Open <http://localhost:5500>.** The first load reads the database from disk and takes **1–2 minutes**; later views are much faster.
 
-> ⚠ **Do not open `index.html` by double-clicking it.** Browsers block `fetch()` on `file://` pages, so the dashboard shows "Trip data could not be loaded".
+> Don't open `index.html` by double-clicking it. Browsers block `fetch()` on `file://` pages.
 
-### 7. Check that it works
+**Without the backend:** set `useMockData: true` at the top of `app.js` to run the dashboard on the 20-trip development dataset. A "Development placeholder data" badge marks this mode.
 
-1. Press **F12 → Console**: there should be no red errors.
-2. The filter bar shows the number of matching trips (e.g. "20 trips match" in mock mode).
-3. Click an hour bar, a zone, a table row (the trip drawer opens; **Escape** closes it) and the **Most expensive** lens.
-4. Choose filters that match nothing (e.g. Fare "Over $60" + Distance "Under 2 mi"): every chart shows a "No trips match" message and a **Reset filters** button.
-5. Press **Ctrl+Shift+M** in DevTools to check the phone layout.
+---
 
-### 8. Custom algorithm: Top-K with a min-heap
+## 5. Build everything from the raw data
 
-The **Outliers** section ranks trips with a hand-written **min-heap** (`algorithms.js`), with no built-in sort and no library heap.
+Use this to reproduce the database instead of downloading it.
 
-- One pass over the matching trips keeps only the **K** strongest (K = 10): **O(n log k)** time and **O(k)** extra space, instead of sorting everything in O(n log n).
-- **Unusual for distance:** score = fare − expected fare from a least-squares trend line. The line is fitted only on trips of 0.5 miles or more, but every trip with a fare and distance is scored, so very short, very expensive trips are found.
-- **Most expensive:** score = fare.
-- **Ties:** equal scores rank the smaller trip id first, so the result is always the same.
-- Trips with a missing fare or distance are skipped and counted as excluded.
+**1. Add the raw trip file** (285 MB, from Canvas) directly inside `data/`:
 
-Pseudo-code and complexity analysis are in the technical report.
-
-### 9. Mock data
-
-`mock/mock_data.json` has the same shape as the API responses:
-
-```json
-{
-  "meta":  { "isMock": true, "periodStart": "2024-01-08", "periodEnd": "2024-01-14" },
-  "zones": [ { "id": 1, "name": "Midtown Center", "borough": "Manhattan" } ],
-  "trips": [ { "id": 1001, "pickupTime": "2024-01-12T17:09:00", "pickupZoneId": 3,
-               "dropoffZoneId": 4, "durationMin": 9, "distance": 1.5, "fare": 9.36 } ]
-}
+```
+data/yellow_tripdata_2019-01.csv        (or .parquet; Parquet is used if both exist)
 ```
 
-Missing values are `null`, never `0`, so averages and sorting skip them instead of treating them as real zeros. Every number in mock mode is a development placeholder, not a finding about New York.
+**2. Install packages and run the pipeline** (from inside `data/`, as a module):
 
-### 10. Troubleshooting
+```bash
+pip install -r data/requirements.txt
+cd data
+python -m data_processing.pipeline
+cd ..
+```
+
+It streams the file in 200,000-row batches, prints progress per batch and finishes with a JSON quality summary.
+
+**3. Build the database:**
+
+```bash
+pip install -r backend/requirements.txt pandas pyarrow
+python backend/database/load_data.py
+```
+
+This creates `backend/database/urban_mobility.db`, loads the 265 zones and inserts the cleaned trips in 100,000-row batches. It takes several minutes. Then continue from step 4 of the quick start.
+
+---
+
+## 6. Data processing pipeline
+
+_Owner: Emmanuel Amarikwa · code in `data/data_processing/`_
+
+Each batch passes through five stages: **read → normalise** (rename columns, coerce types, trim flags) **→ repair** (invalid category codes become `NULL`) **→ add features → validate**. Duplicate rows are detected across batches.
+
+### Rejection rules
+
+Rules are checked in this order; the first match is recorded as the `reject_reason`.
+
+| # | Reason | Rule |
+|---|---|---|
+| 1 | `missing_required_field` | Any of pickup/dropoff time, distance, pickup/dropoff zone, fare or total is empty |
+| 2 | `pickup_outside_period` | Pickup not in January 2019 |
+| 3 | `non_positive_duration` | Duration ≤ 0 minutes |
+| 4 | `duration_over_limit` | Duration > 240 minutes |
+| 5 | `non_positive_distance` | Distance ≤ 0 |
+| 6 | `distance_over_limit` | Distance > 100 miles |
+| 7 | `non_positive_fare` | Fare or total ≤ 0 |
+| 8 | `fare_over_limit` | Fare > $500 |
+| 9 | `negative_charges` | Extra, MTA tax, tip, tolls or improvement surcharge < 0 |
+| 10 | `unknown_location_id` | Pickup or dropoff zone not in the TLC lookup |
+| 11 | `implausible_speed` | Average speed > 80 mph |
+| 12 | `duplicate_record` | Exact duplicate of an earlier row (only if no other rule applies) |
+
+Limits live in `data/data_processing/config.py`. Change them there and re-run the pipeline; the API never re-filters data.
+
+### Derived features
+
+| Column | Definition |
+|---|---|
+| `trip_duration_min` | Dropoff − pickup, in minutes |
+| `avg_speed_mph` | Distance ÷ duration in hours |
+| `fare_per_mile` | Fare ÷ distance |
+| `tip_pct` | Tip ÷ fare × 100, **card payments only** (`NULL` for cash, whose tips are not recorded) |
+| `pickup_hour` | 0–23 |
+| `pickup_weekday` | 0 = Monday … 6 = Sunday |
+
+Divisions by zero produce `NULL`, never infinity. Invalid passenger counts, rate codes and payment types are set to `NULL` instead of rejecting the trip.
+
+### Outputs (`data/output/`)
+
+| File | Contents | In Git? |
+|---|---|---|
+| `clean_trips.parquet` | Cleaned trips with derived features | No (regenerate) |
+| `rejected_trips.csv` | Every excluded raw row plus its `reject_reason` | No (regenerate) |
+| `zones.csv` | 265 zones: `location_id, borough, zone, service_zone` | Yes |
+| `taxi_zones.geojson` | 260 zone boundaries in latitude/longitude (EPSG:4326) | Yes |
+| `quality_summary.json` | Row counts, rejections by reason, repaired values, limits used | Yes |
+
+Zones 264 (Unknown) and 265 (Outside of NYC) are real TLC codes with no map shape; they are kept.
+
+---
+
+## 7. Database
+
+_Owner: UWERA Sylvie · code in `backend/database/` · full details in [`backend/README.md`](backend/README.md)_
+
+A **star schema**: one fact table of trips and four small lookup tables.
+
+```
+                 vendors
+                    │
+   zones ──── trips (fact, 7,579,062 rows) ──── payment_types
+ (pickup and        │
+  dropoff)      rate_codes
+```
+
+- **Integrity:** foreign keys enforced on load; `CHECK` constraints on `pickup_hour` (0–23), `pickup_weekday` (0–6), `store_and_fwd_flag` (Y/N) and dropoff ≥ pickup; optional facts allow `NULL` so "unknown" is never confused with zero.
+- **Indexes:** `pickup_datetime`, `pu_location_id`, `do_location_id`, and `(pickup_weekday, pickup_hour)`.
+
+---
+
+## 8. REST API
+
+_Owner: UWERA Sylvie · `backend/app.py` · base URL `http://localhost:3000/api`_
+
+All endpoints are `GET` and return JSON. Every data endpoint uses one shared filter builder, so all sections of the dashboard describe the same set of trips.
+
+| Endpoint | Ignores filter | Returns |
+|---|---|---|
+| `/health` | — | `{status}` |
+| `/meta` | — | `{isMock, periodStart, periodEnd}` |
+| `/zones` | — | `[{id, name, borough}]`, 265 zones |
+| `/summary` | — | `{totalTrips, avgFare, avgDistance, fareMile}`; fareMile = Σ fare ÷ Σ distance |
+| `/trips-by-hour` | hour | `{hourly: [24 counts]}` |
+| `/fare-by-hour` | hour | `{fareByHour: [24 averages or null]}` |
+| `/top-zones?limit=8` | zone | `{zones: [{zoneId, name, borough, trips, share, avgFare}]}`, busiest first |
+| `/trips?page&pageSize&sortBy&sortDir` | — | `{rows, total, page, totalPages}`; pageSize ≤ 100; sort column from a whitelist; nulls last |
+| `/fare-distance?maxPoints=2000` | — | `{points, total, model: {slope, intercept}}`; least-squares line over all qualifying trips (fare > 0, distance ≥ 0.5 mi) |
+| `/outliers` | — | `{trips, matched, sampled}`; up to 20,000 evenly spaced matching trips for the frontend's Top-K |
+
+**Filter parameters** (all optional, combined with AND):
+
+| Parameter | Valid values | Meaning |
+|---|---|---|
+| `borough` | text, e.g. `Manhattan` | Pickup borough |
+| `zoneId` | integer 1–265 | Pickup zone |
+| `hourFrom`, `hourTo` | integers 0–23, from ≤ to | Pickup hour range (inclusive) |
+| `fareMin`, `fareMax` | numbers ≥ 0 | Fare ≥ min and < max |
+| `distanceMin`, `distanceMax` | numbers ≥ 0 | Distance ≥ min and < max |
+
+**Errors** use one format:
+
+```json
+{ "error": { "code": "BAD_PARAMETER", "message": "hourFrom must not be after hourTo" } }
+```
+
+| Status | Code | When |
+|---|---|---|
+| 400 | `BAD_PARAMETER` | Non-numeric or out-of-range parameter |
+| 404 | `NOT_FOUND` | Unknown endpoint |
+| 500 | `SERVER_ERROR` | Unexpected failure |
+
+All values are passed to SQLite as bound parameters, and sort columns come from a whitelist, so URL input never becomes SQL text. The agreed contract is in [`docs/api_contract.md`](docs/api_contract.md).
+
+---
+
+## 9. Frontend dashboard
+
+_Owner: IRADUKUNDA CYUSA Kevin · repository root_
+
+A single page with no libraries and no build step. Scripts load in order: `algorithms.js` → `charts.js` → `app.js`.
+
+### Data source
+
+At the top of `app.js`:
+
+```js
+const config = {
+    mockDataPath: "mock/mock_data.json",
+    loadDelayMs: 0,
+    useMockData: false,                      // false = live API (default), true = mock data
+    apiBaseUrl: "http://localhost:3000/api"  // where the backend runs
+};
+```
+
+| Mode | Setting | Needs the backend? |
+|---|---|---|
+| **Live API** (default) | `useMockData: false` | Yes. Start it first (section 4) |
+| **Mock** | `useMockData: true` | No. 20 placeholder trips, marked with a "Development placeholder data" badge |
+
+Both modes produce the same view object, so charts, table and drawer behave identically. Mock values are placeholders, not findings about New York, and missing values are `null`, never `0`.
+
+### How it stays correct on a slow backend
+
+| Mechanism | What it does |
+|---|---|
+| Parallel requests | The 7 view requests start together; the page waits for the slowest, not the sum |
+| Stale-render guard | Each render takes a number; an older response arriving late is discarded |
+| Response cache | Repeated URLs are answered from memory. Paging re-requests only `/trips`; switching the outlier lens sends no request |
+| Loading, error and empty states | Banner and skeleton rows while loading; readable error with retry; "No trips match" with a reset button |
+
+### Check that it works
+
+1. Press **F12 → Console**: there should be no red errors.
+2. The filter bar shows **7,579,062 trips match** on the full database.
+3. Click an hour bar, a zone, a table row (the drawer opens; **Escape** closes it) and the **Most expensive** lens.
+4. Choose filters that match nothing (e.g. Fare "Over $60" + Distance "Under 2 mi"): every section shows "No trips match" and a **Reset filters** button.
+5. Press **Ctrl+Shift+M** in DevTools to check the phone layout.
+
+---
+
+## 10. Custom algorithm: Top-K with a min-heap
+
+_Owner: IRADUKUNDA CYUSA Kevin · `algorithms.js` · pseudocode in [`docs/pseudocode.md`](docs/pseudocode.md)_
+
+The Outliers section ranks the **K = 10** strongest trips with a hand-written binary min-heap, with no built-in sort and no library heap.
+
+- One pass keeps only the K strongest trips seen so far; the heap's root is always the weakest of them, so a new trip either replaces the root or is skipped.
+- **Time O(n log k)**, **extra space O(k)**, compared with O(n log n) for sorting everything.
+- **Unusual for distance:** score = fare − (intercept + slope × distance) from the least-squares trend line. The line is fitted on trips of 0.5 miles or more, but every trip with a fare and distance is scored, so very short, very expensive trips are still found.
+- **Most expensive:** score = fare.
+- **Ties:** the smaller trip id ranks first, so results are deterministic. Trips with a missing fare or distance are skipped and counted as excluded.
+
+In API mode the heap runs in the browser on the `/outliers` sample (up to 20,000 evenly spaced matching trips) using the trend line from `/fare-distance`. The result is therefore the Top-10 **of that sample**.
+
+---
+
+## 11. Testing
+
+| What | How | Result |
+|---|---|---|
+| Pipeline rules, features, duplicate detection | `cd data` then `python -m pytest` | 11 tests pass |
+| API | Open `/api/health`, `/api/summary`, `/api/top-zones` in the browser | JSON, status 200 |
+| API validation | `/api/summary?hourFrom=20&hourTo=3` | 400 `BAD_PARAMETER` |
+| Dashboard | The checklist in section 9 | No console errors |
+
+---
+
+## 12. Performance and known limitations
+
+Measured on a development laptop against the full 1.6 GB database:
+
+| Scenario | Time |
+|---|---|
+| First unfiltered load (slowest endpoint: `/top-zones`) | ~1–2 minutes |
+| Whole dashboard filtered to one zone | ~9 seconds |
+| Returning to an already viewed filter, page or lens | Instant (frontend cache) |
+
+**Known limitations**
+
+- **Unfiltered queries read all 7.58M rows**, so no index can speed them up. Caching unfiltered responses on the server or adding a pre-aggregated hour × zone table would remove the first-load wait.
+- **Outliers are ranked from a sample** of up to 20,000 matching trips, not from every trip.
+- **`quality_summary.json` does not match the database:** it reports 3,313,866 kept rows, while the database holds 7,579,062 trips. Confirm which pipeline run produced the database and regenerate the summary from that run.
+- Durations are shown with decimals (e.g. 1.32 min), and zones in the EWR, "Unknown" and "N/A" boroughs have no colour in the scatter legend.
+
+---
+
+## 13. Troubleshooting
 
 | Problem | Fix |
 |---|---|
-| "Trip data could not be loaded" | Page opened as `file://`, or `useMockData: false` with no backend running. Use step 6, or switch to mock mode |
-| Red **CORS** error in the console | The backend must be running and allow the frontend's origin (`http://127.0.0.1:5500` / `http://localhost:5500`) |
-| `Cannot set properties of null` in the console | An `id` in `index.html` doesn't match the one `app.js` looks for |
-| Page looks unstyled | `styles.css` not found. Serve from the project root, not from a subfolder |
-| Port 5500 already in use | Close the other server, or use another port (e.g. `python -m http.server 5501`) |
+| "Trip data could not be loaded. Failed to fetch" | The API is not running on port 3000. Start `python backend/app.py` from the repository root |
+| `no such table: trips` | `urban_mobility.db` is missing, empty or in the wrong folder. It must be `backend/database/urban_mobility.db` (~1.6 GB) |
+| Port 3000 or 5500 already in use | Another server is still running. Stop it (Ctrl+C, or `Get-Process python \| Stop-Process` on Windows) and start again |
+| The API works but the dashboard cannot reach it on Windows | Change `apiBaseUrl` in `app.js` to `http://127.0.0.1:3000/api` |
+| Red **CORS** error in the console | The backend must be running; `flask-cors` allows the dashboard's origin |
+| Page looks unstyled | Serve from the repository root, not a subfolder |
+| `FileNotFoundError: ... yellow taxi trip dataset` | The raw trip file is not in `data/` or is named differently |
+| `No module named 'data_processing'` | Run the pipeline from inside `data/` with `python -m data_processing.pipeline` |
+| `No module named 'geopandas'` (or pandas / pyarrow / flask) | Activate the virtual environment and install the matching `requirements.txt` |
+
+---
+
+## 14. Development workflow
+
+Each member worked on a feature branch, merged into `main` through pull requests:
+
+| Branch | Content | Merged |
+|---|---|---|
+| `feature/data-processing` | Cleaning pipeline and tests | Via `feature/backend-api` |
+| `feature/backend-api` | Database and API | PR #1 |
+| `feature/frontend-ui` | Dashboard and algorithm | PR #2 |
+
+`main` is the final, runnable version. Commit history on each branch shows who built what.
+
+---
+
+## 15. AI usage and CodeVibe reports
+
+Each member's sealed CodeVibe report is in [`codevibe-reports/`](codevibe-reports/), exported with **CodeVibe: Export Assignment Report** and committed by its owner without modification. A `.gitattributes` rule (`codevibe-reports/** -text`) stops Git from changing line endings, so each file's integrity hash stays valid.
+
+---
+
+_Data: NYC Taxi & Limousine Commission (TLC) Yellow Taxi Trip Records and Taxi Zone lookup, January 2019._
