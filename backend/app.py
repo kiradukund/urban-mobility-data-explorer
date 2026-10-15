@@ -171,5 +171,41 @@ def fare_by_hour():
         fares[row["hour"]] = round(row["avg_fare"], 2)
     return jsonify({"fareByHour": fares})
 
+
+@app.route("/api/top-zones")
+def top_zones():
+    """Busiest pickup zones for the current filters (zone filter is ignored)."""
+    limit = request.args.get("limit", default=8, type=int)
+    where, values = build_filters(skip=("zoneId"))
+    conn = get_db()
+
+    total = conn.execute(
+        "SELECT COUNT(*) FROM trips t JOIN zones z ON t.pu_location_id = z.location_id "
+        + where,
+        values,
+    ).fetchone()[0]
+
+    rows = conn.execute(
+        "SELECT z.location_id AS zone_id, z.zone AS name, z.borough AS borough, "
+        "COUNT(*) AS trips, AVG(t.fare_amount) AS avg_fare "
+        "FROM trips t JOIN zones z ON t.pu_location_id = z.location_id "
+        + where +
+        "GROUP BY z.location_id ORDER BY trips DESC LIMIT ?",
+        values + [limit],
+    ).fetchall()
+    conn.close()
+
+    result = []
+    for row in rows:
+        result.append({
+            "zoneId": row["zone_id"],
+            "name": row["name"],
+            "borough": row["borough"],
+            "trips": row["trips"],
+            "share": round(row["trips"] * 100 / total, 1) if total else None,
+            "avgFare": round(row["avg_fare"], 2),
+        })
+    return jsonify({"zones": result})
+
 if __name__ == "__main__":
     app.run(debug=True, port=3000)
