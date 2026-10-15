@@ -1,3 +1,4 @@
+import math
 import sqlite3
 from pathlib import Path
 
@@ -206,6 +207,67 @@ def top_zones():
             "avgFare": round(row["avg_fare"], 2),
         })
     return jsonify({"zones": result})
+
+
+SORT_COLUMNS = {
+    "time": "t.pickup_datetime",
+    "pickupZone": "z.zone",
+    "dropoffZone": "d.zone",
+    "duration": "t.trip_duration_min",
+    "distance": "t.trip_distance",
+    "fare": "t.fare_amount",
+    "fareMile": "t.fare_per_mile",
+}
+
+
+@app.route("/api/trips")
+def trips():
+    """One page of trips for the table; filtered and sorted."""
+    page = request.args.get("page", default=1, type=int)
+    page_size = request.args.get("pageSize", default=10, type=int)
+    page_size = max(1, min(page_size, 100))  # never more than 100 rows per page
+    sort_by = request.args.get("sortBy", default="time")
+    sort_dir = request.args.get("sortDir", default="asc")
+
+    # only columns from the whitelist can reach the SQL
+    sort_column = SORT_COLUMNS.get(sort_by, "t.pickup_datetime")
+    direction = "DESC" if sort_dir == "desc" else "ASC"
+
+    where, values = build_filters()
+    joins = (
+        "FROM trips t "
+        "JOIN zones z ON t.pu_location_id = z.location_id "
+        "LEFT JOIN zones d ON t.do_location_id = d.location_id "
+    )
+    conn = get_db()
+    total = conn.execute("SELECT COUNT(*) " + joins + where, values).fetchone()[0]
+
+    total_pages = max(1, math.ceil(total / page_size))
+    page = max(1, min(page, total_pages))  # too-high page -. last page
+    offset = (page - 1) * page_size
+
+    rows = conn.execute(
+        "SELECT t.trip_id, t.pickup_datetime, t.pu_location_id, t.do_location_id, "
+        "t.trip_duration_min, t.trip_distance, t.fare_amount "
+        + joins + where +
+        f" ORDER BY ({sort_column} IS NULL), {sort_column} {direction}, t.trip_id "
+        "LIMIT ? OFFSET ?",
+        values + [page_size,offset],
+    ).fetchall()
+    conn.close()
+
+    result = []
+    for row in rows:
+        result.append({
+            "id": row["trip_id"],
+            "pickupTime": row["pickup_datetime"].replace(" ", "T"),
+            "pickupZoneId": row["pu_location_id"],
+            "dropoffZoneId": row["do_location_id"],
+            "durationMin": row["trip_duration_min"],
+            "distance": row["trip_distance"],
+            "fare": row["fare_amount"],
+        })
+    return jsonify({"rows": result, "total": total, "page": page, "totalPages": total_pages})
 
 if __name__ == "__main__":
     app.run(debug=True, port=3000)
