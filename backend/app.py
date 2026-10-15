@@ -79,40 +79,45 @@ def build_filters(skip=()):
         values.append(borough)
 
     # zoneId -> pickup zone
-    zone_id = args.get("zoneId", type=int)
+    zone_id = read_number("zoneId", int, 1, 265)
     if zone_id is not None and "zoneId" not in skip:
         conditions.append("t.pu_location_id = ?")
         values.append(zone_id)
 
     # hour range (inclusive on both ends)
-    if "hour" not in skip and ("hourFrom" in args or "hourTo" in args):
-        hour_from = args.get("hourFrom", default=0, type=int)
-        hour_to = args.get("hourTo", default=23, type=int)
-        conditions.append("t.pickup_hour BETWEEN ? AND ?")
-        values.extend([hour_from, hour_to])
+    if "hour" not in skip:
+        hour_from = read_number("hourFrom", int, 0, 23)
+        hour_to = read_number("hourTo", int, 0, 23)
+        hour_from = 0 if hour_from is None else hour_from
+        hour_to = 23 if hour_to is None else hour_to
+        if hour_from > hour_to:
+            raise BadParameter("hourFrom must not be after hourTo")
+        if (hour_from, hour_to) != (0, 23):
+            conditions.append("t.pickup_hour BETWEEN ? AND ?")
+            values.extend([hour_from, hour_to])
 
     # fare: at least fareMin
-    fare_min = args.get("fareMin", type=float)
+    fare_min = read_number("fareMin", float, 0)
     if fare_min is not None:
         conditions.append("t.fare_amount >= ?")
         values.append(fare_min)
 
     # fare: below fareMax
-    fare_max = args.get("fareMax", type=float)
+    fare_max = read_number("fareMax", float, 0)
     if fare_max is not None:
         conditions.append("t.fare_amount < ?")
         values.append(fare_max)
 
 
     # distance: at least distanceMin
-    distance_min = args.get("distanceMin", type=float)
+    distance_min = read_number("distanceMin", float, 0)
     if distance_min is not None:
         conditions.append("t.trip_distance >= ?")
         values.append(distance_min)
 
 
     # distance: below distanceMax
-    distance_max = args.get("distanceMax", type=float)
+    distance_max = read_number("distanceMax", float, 0)
     if distance_max is not None:
         conditions.append("t.trip_distance < ?")
         values.append(distance_max)
@@ -260,7 +265,7 @@ def top_zones():
         result.append({
             "zoneId": row["zone_id"],
             "name": row["name"],
-            "borough": row["trips"],
+            "borough": row["borough"],
             "trips": row["trips"],
             "share": round(row["trips"] * 100 / total, 1) if total else None,
             "avgFare": round(row["avg_fare"], 2),
