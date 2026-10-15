@@ -2,7 +2,7 @@
 const config = {
     mockDataPath: "mock/mock_data.json",
     loadDelayMs: 0,
-    useMockData: true,
+    useMockData: false,
     apiBaseUrl: "http://localhost:3000/api"
 };
 const DEFAULT_FILTERS = {
@@ -211,15 +211,24 @@ function applyFilters() {
     state.filteredTrips = filterTrips(state.allTrips, state.filters);
     renderDashboard();
 }
+let latestRenderId = 0;
 async function renderDashboard() {
+    const renderId = ++latestRenderId;
+    if (!config.useMockData) {
+        setStatus("loading");
+    }
+    let view;
     try {
-        const view = await getView();
-        state.view = view;
+        view = await getView();
     } catch (error) {
         console.error("failed to get view:", error);
-        setStatus("error", "could not load dashboard view.");
+        setStatus("error", "could not load dashboard view. " + error.message);
         return;
     }
+    if (renderId !== latestRenderId) {
+        return;
+    }
+    state.view = view;
 
     updateFilterCount(state.view.summary.totalTrips);
 
@@ -915,7 +924,12 @@ function updateSelectedRow() {
 
 let lastFocusedElement = null;
 function findTripById(tripId) {
-    return state.allTrips.find(trip => trip.id === tripId);
+    const fromAllTrips = state.allTrips.find(trip => trip.id === tripId);
+    if (fromAllTrips || !state.view) {
+        return fromAllTrips;
+    }
+    const visibleTrips = state.view.table.rows.concat(state.view.outliers.entries.map(entry => entry.item));
+    return visibleTrips.find(trip => trip.id === tripId);
 }
 function buildTripNote(trip) {
     const model = state.view ? state.view.fareModel : null;
@@ -1169,13 +1183,121 @@ async function loadStartupData() {
     if (config.useMockData) {
         return loadMockData();
     }
-    throw new Error("The backend start-up data is added in Stage 49.");
+    const [meta, zones] = await Promise.all([fetchJson('/meta'), fetchJson("/zones")]);
+    return { meta: meta, zones: zones, trips: [] };
 }
 async function getView() {
     if (config.useMockData) {
         return buildView();
     }
-    throw new Error("The backend view is added in Stage 49.");
+    return fetchViewFromApi();
 }
+
+
+function buildQuery(filters, ignore) {
+    const params = new URLSearchParams();
+    if (filters.borough !== "all") {
+        params.set("borough", filters.borough);
+    }
+    if (ignore !== "zone" && filters.zone !== "all") {
+        params.set("zoneId", filters.zone);
+    }
+    if (ignore !== "hour") {
+        params.set("hourFrom", filters.hourFrom);
+        params.set("hourTo", filters.hourTo);
+    }
+    const fare = parseRange(filters.fare);
+    if (filters.fare !== "all") {
+        params.set("fareMin", fare.min);
+        if (fare.max !== Infinity) {
+            params.set("fareMax", fare.max);
+        }
+    }
+    const distance = parseRange(filters.distance);
+    if (filters.distance !== "all") {
+        params.set("distanceMin", distance.min);
+        if (distance.max !== Infinity) {
+            params.set("distanceMax", distance.max);
+        }
+    }
+    return params;
+}
+const MAX_CACHED_RESPONSES = 60;
+const apiCache = new Map();
+async function fetchJson(path, params) {
+    const query = params ? "?" + params.toString() : "";
+    const url = config.apiBaseUrl + path + query;
+    if (apiCache.has(url)) {
+        return apiCache.get(url);
+    }
+    const response = await fetch(url);
+    if (!response.ok) {
+        let detail = "";
+        try {
+            const body = await response.json();
+            detail = ": " + body.error.message;
+        } catch (parseError) {
+            detail = "";
+        }
+        throw new Error("request " + path + " failed (status " + response.status + ")" + detail);
+    }
+    const data = await response.json();
+    if (apiCache.size >= MAX_CACHED_RESPONSES) {
+        apiCache.clear();
+    }
+    apiCache.set(url, data);
+    return data;
+}
+function sumArray(values) {
+    let total = 0;
+    for (const value of values) {
+        total += value;
+    }
+    return total;
+}
+async function fetchViewFromApi() {
+    const filters = state.filters;
+    const hourlyParams = buildQuery(filters, "hour");
+    const zoneParams = buildQuery(filters, "zone");
+    zoneParams.set("limit", TOP_ZONE_COUNT);
+    const scatterParams = buildQuery(filters);
+    scatterParams.set("maxPoints", MAX_SCATTER_POINTS);
+    const tableParams = buildQuery(filters);
+    tableParams.set("page", state.table.page);
+    tableParams.set("pageSize", state.table.pageSize);
+    tableParams.set("sortBy", state.table.sortBy);
+    tableParams.set("sortDir", state.table.sortDir);
+    const [summary, hourly, fareByHour, zones, scatter, sample, table] = await Promise.all([
+        fetchJson("/summary", buildQuery(filters)),
+        fetchJson("/trips-by-hour", hourlyParams),
+        fetchJson("/fare-by-hour", hourlyParams),
+        fetchJson("/top-zones", zoneParams),
+        fetchJson("/fare-distance", scatterParams),
+        fetchJson("/outliers", buildQuery(filters)),
+        fetchJson("/trips", tableParams)
+
+    ]);
+    const outliers = calculateOutliers(sample.trips, scatter.model, state.outlierLens);
+    outliers.matched = sample.matched;
+    outliers.sampled = sample.sampled;
+    state.table.page = table.page;
+    return {
+        summary: summary,
+        hourly: hourly.hourly,
+        hourContextTotal: sumArray(hourly.hourly),
+        peak: findPeak(hourly.hourly),
+        fareByHour: fareByHour.fareByHour,
+        zones: zones.zones,
+        scatter: { points: scatter.points, total: scatter.total, model: scatter.model },
+        fareModel: scatter.model,
+        outliers: outliers,
+        outlierIds: new Set(outliers.entries.map(entry => entry.item.id)),
+        table: table
+
+    };
+}
+
+
+
 
 
