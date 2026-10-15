@@ -11,6 +11,54 @@ DB_PATH = Path(__file__).resolve().parent / "database" / "urban_mobility.db"
 app = Flask(__name__)
 CORS(app)  # lets the frontend on another port call this API
 
+class BadParameter(Exception):
+    """Raised when s URL parameter has an invalid value."""
+
+    def __init__(self, message):
+        super().__init__(message)
+        self.message = message
+
+
+# ------------ Error handlers: every error return the same JSON shaPE _____
+
+
+@app.errorhandler(BadParameter)
+def handler_bad_parameter(error):
+    body = {"error": {"code": "BAD_PARAMETER", "message": error.message}}
+    return jsonify(body), 400
+
+
+@app.errorhandler(404)
+def handle_not_found(error):
+    body = {"error": {"code": "NOT_FOUND", "message": "UNKNOWN endpoint"}}
+    return jsonify(body), 404
+
+
+@app.errorhandler(500)
+def handle_server_error(error):
+    body = {"error": {"code": "SERVER_ERROR", "message": "Something went wrong on the server"}}
+    return jsonify(body), 500
+
+
+# -------- Reading and validating numbers from the URL ----------
+
+def read_number(name, kind=float, low=None, high=None):
+    """Read an optional number from the URL and raise BadParameter if it is invalid."""
+    raw = request.args.get(name)
+    if raw is None or raw == "":
+        return None # not sent = no filter
+
+    try:
+        value = kind(raw) # "7", "abc" -> error
+    except ValueError:
+        raise BadParameter(f"{name} must be a number")
+
+    if low is not None and value < low:
+        raise BadParameter(f"{name} must be at least {low}")
+    if high is not None and value > high:
+        raise BadParameter(f"{name} must be at most {high}")
+    return value
+
 
 def get_db():
     """Open the database so each row can be turned into a dictionary."""
@@ -188,7 +236,7 @@ def fare_by_hour():
 def top_zones():
     """Busiest pickup zones for the current filters (zone filter is ignored)."""
     limit = request.args.get("limit", default=8, type=int)
-    where, values = build_filters(skip=("zoneId"))
+    where, values = build_filters(skip=("zoneId",))
     conn = get_db()
 
     total = conn.execute(
@@ -207,7 +255,16 @@ def top_zones():
     ).fetchall()
     conn.close()
 
-    result = [trip_to_json(row) for row in rows]
+    result = []
+    for row in rows:
+        result.append({
+            "zoneId": row["zone_id"],
+            "name": row["name"],
+            "borough": row["trips"],
+            "trips": row["trips"],
+            "share": round(row["trips"] * 100 / total, 1) if total else None,
+            "avgFare": round(row["avg_fare"], 2),
+        })
     return jsonify({"zones": result})
 
 
@@ -304,7 +361,7 @@ def fare_distance():
             model = {"slope": round(slope, 4), "intercept": round(intercept, 4)}
 
     # 2. an evenly spread, repeatable sample of points
-    step = max(1, total // max_points)
+    step = max(1, math.ceil(total / max_points))
     rows = conn.execute(
         "SELECT t.trip_id, t.trip_distance, t.fare_amount, z.borough "
         + joins + where +
@@ -335,7 +392,7 @@ def outliers():
     matched = conn.execute("SELECT COUNT(*) " + joins + where, values).fetchone()[0]
 
     # every Nth trip: when fewer than max_trips match, step is 1 = all of them
-    step = max(1, matched // max_trips)
+    step = max(1, math.ceil(matched / max_trips))
     every_nth = "t.trip_id % ? = 0"
     sample_where = (where + " AND " + every_nth) if where else ("WHERE " + every_nth)
 
