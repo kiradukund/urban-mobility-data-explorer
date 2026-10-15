@@ -269,5 +269,59 @@ def trips():
         })
     return jsonify({"rows": result, "total": total, "page": page, "totalPages": total_pages})
 
+
+@app.route("/api/fare-distance")
+def fare_distance():
+    """Sampled points for the scatter plot, plus a least-squares trend line."""
+    max_points = request.args.get("maxPoints", default=2000, type=int)
+    max_points = max(1, min(max_points, 5000))
+
+    where, values = build_filters()
+    qualifying = "t.fare_amount > 0 AND t.trip_distance >= 0.5"
+    where = (where + " AND " + qualifying) if where else ("WHERE " + qualifying)
+    joins = "FROM trips t JOIN zones z ON t.pu_location_id = z.location_id "
+
+    conn = get_db()
+
+    # 1. the five totals for the trend line, over ALL qualifying trips
+    s = conn.execute(
+        "SELECT COUNT(*) AS n, SUM(t.trip_distance) AS sx, SUM(t.fare_amount) AS sy, "
+        "SUM(t.trip_distance * t.trip_distance) AS sxx, "
+        "SUM(t.trip_distance * t.fare_amount) AS sxy "
+        + joins + where,
+        values,
+    ).fetchone()
+    total = s["n"]
+
+    model = None
+    if total >= 2:
+        denominator = total * s["sxx"] - s["sx"] * s["sx"]
+        if denominator != 0:
+            slope = (total * s["sxy"] - s["sx"] * s["sy"]) / denominator
+            intercept = (s["sy"] - slope * s["sx"]) / total
+            model = {"slope": round(slope, 4), "intercept": round(intercept, 4)}
+
+    # 2. an evenly spread, repeatable sample of points
+    step = max(1, total // max_points)
+    rows = conn.execute(
+        "SELECT t.trip_id, t.trip_distance, t.fare_amount, z.borough "
+        + joins + where +
+        " AND t.trip_id % ? = 0 LIMIT ?",
+        values + [step, max_points],
+    ).fetchall()
+    conn.close()
+
+    points = []
+    for row in rows:
+        points.append({
+            "id": row["trip_id"],
+            "distance": row["trip_distance"],
+            "fare": row["fare_amount"],
+            "borough": row["borough"],
+        })
+    return jsonify({"points": points, "total": total, "model": model})
+
+
+
 if __name__ == "__main__":
     app.run(debug=True, port=3000)
