@@ -455,7 +455,7 @@ Each member worked on a feature branch, merged into `main` through pull requests
 
 ## 15. AI usage and CodeVibe reports
 
-Each member's sealed CodeVibe report is in [`codevibe-reports/`](codevibe-reports/), exported with **CodeVibe: Export Assignment Report** and committed by its owner without modification. A `.gitattributes` rule (`codevibe-reports/** -text`) stops Git from changing line endings, so each file's integrity hash stays valid.
+Each member's CodeVibe export is in [`codevibe-reports/`](codevibe-reports/), exported from the CodeVibe extension and committed by its owner without modification. A `.gitattributes` rule (`codevibe-reports/** -text`) stops Git from changing line endings, so the files stay byte-for-byte identical to the exports.
 
 ---
 
