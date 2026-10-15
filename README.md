@@ -6,7 +6,7 @@ An end-to-end system for exploring **New York City Yellow Taxi trips (January 20
 |---|---|
 | 🎥 **Video walkthrough** | _[add video link]_ |
 | 🗄️ **Prepared database** (`urban_mobility.zip`, ~495 MB) | https://drive.google.com/file/d/1q4Opxxvu17Zh8ogH2iN-PrPCndQvTrYE/view?usp=sharing |
-| 📄 **Technical report** | _[add report link]_ |
+| 📄 **Technical report** | https://drive.google.com/file/d/16nWwuGzi9U7bpWKCMHv7_AqeGM1yHhp6/view?usp=sharing |
 | ✅ **Team task sheet** | [Google Sheet](https://docs.google.com/spreadsheets/d/1d-wc7vEV7Mh1RwuPFk3NMYn0ZM0E3tuL2cny6_v9Bo8/edit?usp=sharing) |
 
 ---
