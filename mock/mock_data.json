@@ -1,0 +1,272 @@
+{
+    "meta": {
+        "isMock": true,
+        "label": "DEVELOPMENT PLACEHOLDER DATA - NOT REAL NYC FINDINGS",
+        "periodStart": "2024-01-08",
+        "periodEnd": "2024-01-14"
+    },
+    "zones": [
+        {
+            "id": 1,
+            "name": "Midtown Center",
+            "borough": "Manhattan"
+        },
+        {
+            "id": 2,
+            "name": "Upper East Side South",
+            "borough": "Manhattan"
+        },
+        {
+            "id": 3,
+            "name": "Penn Station / MSG",
+            "borough": "Manhattan"
+        },
+        {
+            "id": 4,
+            "name": "Times Square",
+            "borough": "Manhattan"
+        },
+        {
+            "id": 5,
+            "name": "JFK Airport",
+            "borough": "Queens"
+        },
+        {
+            "id": 6,
+            "name": "Murray Hill",
+            "borough": "Manhattan"
+        },
+        {
+            "id": 7,
+            "name": "LaGuardia Airport",
+            "borough": "Queens"
+        },
+        {
+            "id": 8,
+            "name": "West Village",
+            "borough": "Manhattan"
+        },
+        {
+            "id": 9,
+            "name": "SoHo",
+            "borough": "Manhattan"
+        },
+        {
+            "id": 10,
+            "name": "Chelsea",
+            "borough": "Manhattan"
+        },
+        {
+            "id": 11,
+            "name": "Williamsburg",
+            "borough": "Brooklyn"
+        },
+        {
+            "id": 12,
+            "name": "Park Slope",
+            "borough": "Brooklyn"
+        },
+        {
+            "id": 13,
+            "name": "Bushwick",
+            "borough": "Brooklyn"
+        },
+        {
+            "id": 14,
+            "name": "Astoria",
+            "borough": "Queens"
+        },
+        {
+            "id": 15,
+            "name": "Fordham",
+            "borough": "Bronx"
+        },
+        {
+            "id": 16,
+            "name": "Battery Park",
+            "borough": "Manhattan"
+        }
+    ],
+    "trips": [
+        {
+            "id": 1001,
+            "pickupTime": "2024-01-12T17:09:00",
+            "pickupZoneId": 3,
+            "dropoffZoneId": 4,
+            "durationMin": 9,
+            "distance": 1.5,
+            "fare": 9.36
+        },
+        {
+            "id": 1002,
+            "pickupTime": "2024-01-08T13:16:00",
+            "pickupZoneId": 1,
+            "dropoffZoneId": 9,
+            "durationMin": 35,
+            "distance": 8.5,
+            "fare": 27.34
+        },
+        {
+            "id": 1003,
+            "pickupTime": "2024-01-14T14:27:00",
+            "pickupZoneId": 9,
+            "dropoffZoneId": 13,
+            "durationMin": 15,
+            "distance": 2.1,
+            "fare": 9.4
+        },
+        {
+            "id": 1004,
+            "pickupTime": "2024-01-13T14:34:00",
+            "pickupZoneId": 2,
+            "dropoffZoneId": 6,
+            "durationMin": 32,
+            "distance": 6.1,
+            "fare": 21.97
+        },
+        {
+            "id": 1005,
+            "pickupTime": "2024-01-14T19:20:00",
+            "pickupZoneId": 1,
+            "dropoffZoneId": 3,
+            "durationMin": 14,
+            "distance": 1.5,
+            "fare": 7.58
+        },
+        {
+            "id": 1006,
+            "pickupTime": "2024-01-09T07:43:00",
+            "pickupZoneId": 2,
+            "dropoffZoneId": 4,
+            "durationMin": 10,
+            "distance": 1.9,
+            "fare": 10.4
+        },
+        {
+            "id": 1007,
+            "pickupTime": "2024-01-09T21:01:00",
+            "pickupZoneId": 11,
+            "dropoffZoneId": 3,
+            "durationMin": 18,
+            "distance": 3.1,
+            "fare": 10.66
+        },
+        {
+            "id": 1008,
+            "pickupTime": "2024-01-14T19:07:00",
+            "pickupZoneId": 5,
+            "dropoffZoneId": 14,
+            "durationMin": 60,
+            "distance": 15.6,
+            "fare": 71.6
+        },
+        {
+            "id": 1009,
+            "pickupTime": "2024-01-13T12:13:00",
+            "pickupZoneId": 10,
+            "dropoffZoneId": 5,
+            "durationMin": 11,
+            "distance": 1.4,
+            "fare": 6.14
+        },
+        {
+            "id": 1010,
+            "pickupTime": "2024-01-14T18:31:00",
+            "pickupZoneId": 5,
+            "dropoffZoneId": 1,
+            "durationMin": 80,
+            "distance": 20.8,
+            "fare": 76.8
+        },
+        {
+            "id": 1011,
+            "pickupTime": "2024-01-11T19:55:00",
+            "pickupZoneId": 4,
+            "dropoffZoneId": 5,
+            "durationMin": 9,
+            "distance": 1,
+            "fare": 5.46
+        },
+        {
+            "id": 1012,
+            "pickupTime": "2024-01-09T18:22:00",
+            "pickupZoneId": 5,
+            "dropoffZoneId": 10,
+            "durationMin": 62,
+            "distance": 3.1,
+            "fare": 212
+        },
+        {
+            "id": 1013,
+            "pickupTime": "2024-01-14T07:51:00",
+            "pickupZoneId": 8,
+            "dropoffZoneId": 13,
+            "durationMin": 14,
+            "distance": 2.3,
+            "fare": 10.15
+        },
+        {
+            "id": 1014,
+            "pickupTime": "2024-01-14T17:13:00",
+            "pickupZoneId": 1,
+            "dropoffZoneId": 11,
+            "durationMin": 32,
+            "distance": 6.4,
+            "fare": 22.55
+        },
+        {
+            "id": 1015,
+            "pickupTime": "2024-01-09T15:21:00",
+            "pickupZoneId": 4,
+            "dropoffZoneId": 5,
+            "durationMin": 37,
+            "distance": 8,
+            "fare": 28.56
+        },
+        {
+            "id": 1016,
+            "pickupTime": "2024-01-08T20:20:00",
+            "pickupZoneId": 2,
+            "dropoffZoneId": 14,
+            "durationMin": 17,
+            "distance": 2.5,
+            "fare": 11.17
+        },
+        {
+            "id": 1017,
+            "pickupTime": "2024-01-14T16:44:00",
+            "pickupZoneId": 1,
+            "dropoffZoneId": 2,
+            "durationMin": 20,
+            "distance": 3.1,
+            "fare": 11.03
+        },
+        {
+            "id": 1018,
+            "pickupTime": "2024-01-08T19:33:00",
+            "pickupZoneId": 3,
+            "dropoffZoneId": 9,
+            "durationMin": 37,
+            "distance": 8.3,
+            "fare": 28.55
+        },
+        {
+            "id": 1019,
+            "pickupTime": "2024-01-13T13:34:00",
+            "pickupZoneId": 16,
+            "dropoffZoneId": 1,
+            "durationMin": 17,
+            "distance": 3.1,
+            "fare": 10.45
+        },
+        {
+            "id": 1020,
+            "pickupTime": "2024-01-10T16:15:00",
+            "pickupZoneId": 1,
+            "dropoffZoneId": 11,
+            "durationMin": 27,
+            "distance": 6.1,
+            "fare": 18.75
+        }
+    ]
+}
