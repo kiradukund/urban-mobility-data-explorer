@@ -206,7 +206,7 @@ def trips_by_hour():
         "SELECT t.pickup_hour AS hour, COUNT(*) AS trips "
         "FROM trips t JOIN zones z ON t.pu_location_id = z.location_id "
         + where +
-        "GROUP BY hour",
+        " GROUP BY hour",
         values,
     ).fetchall()
     conn.close()
@@ -226,7 +226,7 @@ def fare_by_hour():
         "SELECT t.pickup_hour AS hour, AVG(t.fare_amount) AS avg_fare "
         "FROM trips t JOIN zones z ON t.pu_location_id = z.location_id "
         + where +
-        "GROUP BY hour",
+        " GROUP BY hour",
         values,
     ).fetchall()
     conn.close()
@@ -255,7 +255,7 @@ def top_zones():
         "COUNT(*) AS trips, AVG(t.fare_amount) AS avg_fare "
         "FROM trips t JOIN zones z ON t.pu_location_id = z.location_id "
         + where +
-        "GROUP BY z.location_id ORDER BY trips DESC LIMIT ?",
+        " GROUP BY z.location_id ORDER BY trips DESC LIMIT ?",
         values + [limit],
     ).fetchall()
     conn.close()
