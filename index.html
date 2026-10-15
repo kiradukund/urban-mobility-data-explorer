@@ -1,0 +1,295 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Urban Mobility Explorer</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link
+        href="https://fonts.googleapis.com/css2?family=DM+Serif+Display:ital@0;1&family=Inter:wght@400;500;600;700&display=swap"
+        rel="stylesheet">
+    <link rel="stylesheet" href="styles.css">
+</head>
+
+<body>
+    <!-- Page structure [I'm creating an empty frame on the page]-->
+    <header class="site-header" id="site-header">
+        <div class="site-header__inner">
+            <div class="site-header__brand">
+                <span class="site-header__kicker">NYC Taxi</span>
+                <h1 class="site-header__title">Urban Mobility Explorer</h1>
+            </div>
+            <p class="site-header__tagline">Read the pulse of NYC through taxi movement.</p>
+        </div>
+    </header>
+    <section class="filter-bar" id="filters" aria-label="filters">
+        <div class="filter-bar__inner">
+            <div class="filter-bar__controls">
+                <div class="filter-field">
+                    <label class="filter-field__label" for="filter-borough">Borough</label>
+                    <select class="filter-field__control" id="filter-borough">
+                        <option value="all">All boroughs</option>
+                        <option value="Manhattan">Manhattan</option>
+                        <option value="Brooklyn">Brooklyn</option>
+                        <option value="Queens">Queens</option>
+                        <option value="Bronx">Bronx</option>
+                        <option value="Staten Island">Staten Island</option>
+                    </select>
+                </div>
+                <div class="filter-field">
+                    <label class="filter-field__label" for="filter-zone">pickup zone</label>
+                    <select class="filter-field__control" id="filter-zone">
+                        <option value="all">All pickup zones</option>
+                    </select>
+                </div>
+                <div class="filter-field">
+                    <label class="filter-field__label" for="filter-hour-from">Hours from</label>
+                    <select class="filter-field__control" id="filter-hour-from">
+                        <option value="0">12 AM</option>
+                    </select>
+                </div>
+                <div class="filter-field">
+                    <label class="filter-field__label" for="filter-hour-to">Hours until</label>
+                    <select class="filter-field__control" id="filter-hour-to">
+                        <option value="23">11 PM</option>
+                    </select>
+                </div>
+                <div class="filter-field">
+                    <label class="filter-field__label" for="filter-fare">fare</label>
+                    <select class="filter-field__control" id="filter-fare">
+                        <option value="all">Any fare</option>
+                        <option value="0-15">Under $15</option>
+                        <option value="15-30">$15 &ndash; $30</option>
+                        <option value="30-60">$30 &ndash; $60</option>
+                        <option value="60+">Over $60</option>
+                    </select>
+                </div>
+                <div class="filter-field">
+                    <label class="filter-field__label" for="filter-distance">Distance</label>
+                    <select class="filter-field__control" id="filter-distance">
+                        <option value="all">Any distance</option>
+                        <option value="0-2">Under 2 mi</option>
+                        <option value="2-5">2 &ndash; 5 mi</option>
+                        <option value="5-10">5 &ndash; 10 mi</option>
+                        <option value="10+">Over 10 mi</option>
+                    </select>
+                </div>
+                <button class="filter-bar__reset" type="button" id="filter-reset">reset</button>
+            </div>
+            <div class="filter-bar__status">
+                <p class="filter-bar__count" id="filter-count" aria-live="polite"></p>
+                <div class="filter-chips">
+                    <span class="filter-chips__label">Active view</span>
+                    <ul class="filter-chips__list" id="filter-chip-list"></ul>
+                    <p class="filter-chips__empty" id="filter-chips-empty">No filters applied</p>
+                </div>
+            </div>
+        </div>
+    </section>
+
+
+
+
+    <main class="dashboard">
+
+
+        <div class="state-banner" id="state-banner" role="status" hidden>
+            <p class="state-banner__text" id="state-banner-text"></p>
+            <button class="state-banner__retry" type="button" id="state-banner-retry" hidden>Try again</button>
+        </div>
+        <section class="story-section" id="pulse" aria-labelledby="pulse-headline">
+            <p class="section-label"><span class="section-label__number">01</span> City pulse</p>
+            <p class="pulse__period" id="pulse-period"></p>
+            <h2 class="pulse__headline" id="pulse-headline">reading the city pulse&hellip;</h2>
+            <p class="pulse__support" id="pulse-support"></p>
+            <p class="pulse__support" id="pulse-zone"></p>
+            <p class="data-badge" id="data-badge" hidden>Development placeholder data</p>
+            <dl class="pulse-stats">
+                <div class="pulse-stats__item">
+                    <dt class="pulse-stats__label">trips</dt>
+                    <dd class="pulse-stats__value" id="stat-trips">&ndash;</dd>
+                </div>
+                <div class="pulse-stats__item">
+                    <dt class="pulse-stats__label">Avg fare</dt>
+                    <dd class="pulse-stats__value" id="stat-fare">&ndash;</dd>
+                </div>
+                <div class="pulse-stats__item">
+                    <dt class="pulse-stats__label">Avg distance</dt>
+                    <dd class="pulse-stats__value" id="stat-distance">&ndash;</dd>
+                </div>
+                <div class="pulse-stats__item">
+                    <dt class="pulse-stats__label">Fare / mile</dt>
+                    <dd class="pulse-stats__value" id="stat-farepermile">&ndash;</dd>
+                </div>
+            </dl>
+            <div class="rhythm">
+                <div class="chart-heading">
+                    <h3 class="chart-title">24-hour mobility rhythm</h3>
+                    <p class="chart-subtitle">Trips by pickup hour. Amber marks the peak window, or your selected
+                        hours.</p>
+                </div>
+                <div class="rhythm__chart" id="rhythm-chart" role="group"
+                    aria-label="trips by pickup hour. select a bar to filter to that hour."></div>
+                <div class="rhythm__axis" aria-hidden="true">
+                    <span class="rhythm__tick rhythm__tick--0">12 AM</span>
+                    <span class="rhythm__tick rhythm__tick--6">6 AM</span>
+                    <span class="rhythm__tick rhythm__tick--12">12 PM</span>
+                    <span class="rhythm__tick rhythm__tick--18">6 PM</span>
+                    <span class="rhythm__tick rhythm__tick--23">11 PM</span>
+                </div>
+            </div>
+        </section>
+        <section class="story-section" id="patterns" aria-labelledby="patterns-heading">
+            <p class="section-label"><span class="section-label__number">02</span> patterns</p>
+            <h2 class="section-title" id="patterns-heading">Fares by hour and where trips begin</h2>
+            <div class="patterns__grid">
+                <article class="chart-card">
+                    <div class="chart-heading">
+                        <h3 class="chart-title">Average fare by hour</h3>
+                        <p class="chart-subtitle">Mean fare for trips starting in each hour</p>
+                    </div>
+                    <div class="fare-hour__chart" id="fare-hour-chart"></div>
+                </article>
+                <article class="chart-card">
+                    <div class="chart-heading">
+                        <h3 class="chart-title">Top pickup zones</h3>
+                        <p class="chart-subtitle">Select a zone to filter the whole dashboard</p>
+                    </div>
+                    <div class="zone-list" id="zone-list"></div>
+                </article>
+            </div>
+        </section>
+        <section class="story-section" id="relationships" aria-labelledby="relationships-heading">
+            <p class="section-label"><span class="section-label__number">03</span> Relationships</p>
+            <h2 class="section-title" id="relationships-heading">Fare <span class="section-title__times">&times;</span>
+                Distance</h2>
+            <p class="section-intro">Each dot is one trip. The dashed line is the typical fare for a given distance.</p>
+            <div class="scatter-controls">
+                <label class="filter-field__label" for="scatter-color">colour dots by</label>
+                <select class="filter-field__control" id="scatter-color">
+                    <option value="none">Nothing</option>
+                    <option value="borough">Pickup borough</option>
+                </select>
+            </div>
+            <div class="scatter" id="scatter-chart"></div>
+            <ul class="scatter-legend" id="scatter-legend" hidden></ul>
+            <p class="chart-note" id="scatter-note"></p>
+        </section>
+        <section class="story-section" id="outliers" aria-labelledby="outliers-heading">
+            <p class="section-label"><span class="section-label__number">04</span> outliers</p>
+            <h2 class="section-title" id="outliers-heading">Trips outside the expected curve.</h2>
+            <div class="outliers__toolbar">
+                <p class="section-intro" id="outlier-intro"></p>
+                <div class="segmented" role="group" aria-label="ranking lens">
+                    <button class="segmented__button is-active" type="button" id="lens-unusual"
+                        aria-pressed="true">Unusual for distance</button>
+                    <button class="segmented__button" type="button" id="lens-expensive" aria-pressed="false">Most
+                        expensive</button>
+                </div>
+            </div>
+            <p class="outliers__meta" id="outlier-meta"></p>
+            <ol class="outlier-list" id="outlier-list"></ol>
+            <details class="outliers__how">
+                <summary>How this ranking is computed</summary>
+                <p>The dashboard keeps a small min-heap of the K strongest trips while it scans the matching trips
+                    once. It never sorts the whole list. Trips with a missing fare or distance are excluded from the
+                    ranking. Trips under 0.5 miles are left out of the trend line only.</p>
+            </details>
+        </section>
+        <section class="story-section" id="evidence" aria-labelledby="evidence-heading">
+            <p class="section-label"><span class="section-label__number">05</span> Evidence</p>
+            <div class="evidence__header">
+                <h2 class="section-title" id="evidence-heading">Trip-level evidence</h2>
+                <p class="section-intro" id="evidence-summary"></p>
+            </div>
+            <div class="table-wrap">
+                <table class="trip-table">
+                    <caption class="visually-hidden">Taxi trips matching the current filters</caption>
+                    <thead>
+                        <tr>
+                            <th scope="col"><button class="sort-button" type="button" data-sort="time">date</button>
+                            </th>
+                            <th scope="col">Time</th>
+                            <th scope="col"><button class="sort-button" type="button" data-sort="pickupZone">pickup
+                                    zone</button></th>
+                            <th scope="col"><button class="sort-button" type="button" data-sort="dropoffZone">Dropoff
+                                    zone</button></th>
+
+                            <th scope="col" class="is-numeric"><button class="sort-button" type="button"
+                                    data-sort="duration">Duration</button></th>
+                            <th scope="col" class="is-numeric"><button class="sort-button" type="button"
+                                    data-sort="distance">Distance</button></th>
+                            <th scope="col" class="is-numeric"><button class="sort-button" type="button"
+                                    data-sort="fare">fare</button></th>
+                            <th scope="col" class="is-numeric"><button class="sort-button" type="button"
+                                    data-sort="fareMile">Fare /mile</button></th>
+                            <th scope="col">status</th>
+
+                        </tr>
+                    </thead>
+                    <tbody id="trip-table-body"></tbody>
+                </table>
+
+            </div>
+            <nav class="pagination" aria-label="Table pagination">
+                <button class="pagination__button" type="button" id="page-prev">previous</button>
+                <p class="pagination__status" id="pagination-status" aria-live="polite"></p>
+                <button class="pagination__button" type="button" id="page-next">Next</button>
+            </nav>
+        </section>
+        <section class="story-section" id="methodology" aria-labelledby="methodology-heading">
+            <p class="section-label"><span class="section-label__number">06</span> Methodology</p>
+            <h2 class="section-title" id="methodology-heading">Data and method</h2>
+            <dl class="method-list">
+                <div class="method-list__item">
+                    <dt>Source</dt>
+                    <dd>NYC Taxi &amp; Limousine Commission (TLC) Yellow Taxi Trip Records, with taxi zone names from
+                        the
+                        TLC taxi zone lookup.</dd>
+                </div>
+                <div class="method-list__item">
+                    <dt>processing</dt>
+                    <dd>Trips are cleaned and prepared by the project data pipeline. Trips with a missing fare or
+                        distance are excluded from the outlier ranking but remain in the
+                        table.</dd>
+                </div>
+                <div class="method-list__item">
+                    <dt>Coverage</dt>
+                    <dd>The period shown in city pulse is the period of the data currently loaded.</dd>
+                </div>
+                <div class="method-list__item">
+                    <dt>Development data</dt>
+                    <dd>While this page reads mock/mock_data.json, every number is a development placeholder, not a
+                        finding about New York. It is replaced by processed data from the project API.</dd>
+                </div>
+            </dl>
+        </section>
+    </main>
+
+    <footer class="site-footer" id="site-footer">
+        <p>Urban Mobility Data Explorer &middot; University project &middot; Data: NYC TLC Yellow Taxi Trip Records</p>
+    </footer>
+    <div class="drawer-backdrop" id="drawer-backdrop" hidden></div>
+    <aside class="drawer" id="trip-drawer" role="dialog" aria-modal="true" aria-labelledby="drawer-title"
+        aria-hidden="true">
+        <div class="drawer__header">
+            <div>
+                <p class="drawer__kicker">Trip detail</p>
+                <h2 class="drawer__title" id="drawer-title">Trip</h2>
+            </div>
+            <button class="drawer__close" type="button" id="drawer-close">close</button>
+        </div>
+        <dl class="drawer__list" id="drawer-list"></dl>
+        <p class="drawer__note" id="drawer-note"></p>
+    </aside>
+
+
+
+    <script src="algorithms.js"></script>
+    <script src="charts.js"></script>
+    <script src="app.js"></script>
+</body>
+
+</html>
