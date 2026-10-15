@@ -33,7 +33,7 @@ def build_filters(skip=()):
     # zoneId -> pickup zone
     zone_id = args.get("zoneId", type=int)
     if zone_id is not None and "zoneId" not in skip:
-        conditions.append("t.pickup_hour BETWEEN ? AND ?")
+        conditions.append("t.pu_location_id = ?")
         values.append(zone_id)
 
     # hour range (inclusive on both ends)
@@ -73,6 +73,17 @@ def build_filters(skip=()):
     where = "WHERE " + " AND ".join(conditions) if conditions else ""
     return where, values
 
+def trip_to_json(row):
+    """Turn one trips row into the trip object agreed in the API contract,"""
+    return {
+        "id": row["trip_id"],
+        "pickupTime": row["pickup_datetime"].replace(" ", "T"),
+        "pickupZoneId": row["pu_location_id"],
+        "dropoffZoneId": row["do_location_id"],
+        "durationMin": row["trip_duration_min"],
+        "distance": row["trip_distance"],
+        "fare": row["fare_amount"],
+    }
 
 @app.route("/api/health")
 def health():
@@ -196,16 +207,7 @@ def top_zones():
     ).fetchall()
     conn.close()
 
-    result = []
-    for row in rows:
-        result.append({
-            "zoneId": row["zone_id"],
-            "name": row["name"],
-            "borough": row["borough"],
-            "trips": row["trips"],
-            "share": round(row["trips"] * 100 / total, 1) if total else None,
-            "avgFare": round(row["avg_fare"], 2),
-        })
+    result = [trip_to_json(row) for row in rows]
     return jsonify({"zones": result})
 
 
@@ -320,6 +322,33 @@ def fare_distance():
             "borough": row["borough"],
         })
     return jsonify({"points": points, "total": total, "model": model})
+
+
+@app.route("/api/outliers")
+def outliers():
+    """Up to 20,000 trips for the frontend's Top-K heap (evenly sampled if more match)."""
+    max_trips = 20_000
+    where, values = build_filters()
+    joins = "FROM trips t JOIN zones z ON t.pu_location_id = z.location_id "
+    conn = get_db()
+
+    matched = conn.execute("SELECT COUNT(*) " + joins + where, values).fetchone()[0]
+
+    # every Nth trip: when fewer than max_trips match, step is 1 = all of them
+    step = max(1, matched // max_trips)
+    every_nth = "t.trip_id % ? = 0"
+    sample_where = (where + " AND " + every_nth) if where else ("WHERE " + every_nth)
+
+    rows = conn.execute(
+        "SELECT t.trip_id, t.pickup_datetime, t.pu_location_id, t.do_location_id, "
+        "t.trip_duration_min, t.trip_distance, t.fare_amount "
+        + joins + sample_where + " LIMIT ?",
+        values + [step, max_trips],
+    ).fetchall()
+    conn.close()
+
+    sample = [trip_to_json(row) for row in rows]
+    return jsonify({"trips": sample, "matched": matched, "sampled": len(sample)})
 
 
 
